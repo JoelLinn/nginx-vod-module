@@ -2864,7 +2864,7 @@ mp4_parser_process_moov_atom_callback(void* ctx, atom_info_t* atom_info)
 
 	// check whether we should include this track
 	track_index = context->track_indexes[metadata_parse_context.media_info.media_type]++;
-	if ((context->parse_params.required_tracks_mask[metadata_parse_context.media_info.media_type] & (1 << track_index)) == 0)
+	if ((context->parse_params.required_tracks_mask[metadata_parse_context.media_info.media_type] & ((uint64_t)1 << track_index)) == 0)
 	{
 		return VOD_OK;
 	}

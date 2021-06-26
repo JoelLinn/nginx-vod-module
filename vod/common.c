@@ -21,6 +21,13 @@ vod_get_number_of_set_bits(uint32_t i)
 	return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
 }
 
+uint32_t
+vod_get_number_of_set_bits64(uint64_t i)
+{
+  // TODO dirty hack, use popcnt if available
+  return vod_get_number_of_set_bits((uint32_t)i) + vod_get_number_of_set_bits((uint32_t)(i >> 32));
+}
+
 u_char*
 vod_append_hex_string(u_char* p, const u_char* buffer, uint32_t buffer_size)
 {

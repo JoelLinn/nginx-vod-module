@@ -111,7 +111,7 @@ static ebml_spec_t mkv_spec_track_fields[] = {
 	{ MKV_ID_TRACKDEFAULTDURATION,	EBML_UINT,		offsetof(mkv_track_t, default_duration),	NULL },
 	{ MKV_ID_TRACKCODECDELAY,		EBML_UINT,		offsetof(mkv_track_t, codec_delay),			NULL },
 	{ MKV_ID_TRACKLANGUAGE,			EBML_STRING,	offsetof(mkv_track_t, language),			NULL },
-	{ MKV_ID_TRACKNAME,				EBML_STRING,	offsetof(mkv_track_t, name),				NULL },	
+	{ MKV_ID_TRACKNAME,				EBML_STRING,	offsetof(mkv_track_t, name),				NULL },
 	{ MKV_ID_TRACKVIDEO,			EBML_MASTER,	offsetof(mkv_track_t, u.video),				mkv_spec_track_video },
 	{ MKV_ID_TRACKAUDIO,			EBML_MASTER,	offsetof(mkv_track_t, u.audio),				mkv_spec_track_audio },
 	{ 0, EBML_NONE, 0, NULL }
@@ -282,7 +282,7 @@ static bool_t
 mkv_is_doctype_supported(vod_str_t* doctype)
 {
 	vod_str_t* cur_doctype;
-	
+
 	for (cur_doctype = mkv_supported_doctypes; cur_doctype->len; cur_doctype++)
 	{
 		if (doctype->len == cur_doctype->len &&
@@ -404,9 +404,9 @@ mkv_compare_section_positions(const void* p1, const void* p2)
 
 static vod_status_t
 mkv_get_file_layout(
-	request_context_t* request_context, 
-	const u_char* buffer, 
-	size_t size, 
+	request_context_t* request_context,
+	const u_char* buffer,
+	size_t size,
 	mkv_file_layout_t* result)
 {
 	ebml_header_t header;
@@ -482,9 +482,9 @@ mkv_get_file_layout(
 
 	// sort according to position to optimize reading
 	qsort(
-		result->positions, 
-		SECTION_FILE_COUNT, 
-		sizeof(result->positions[0]), 
+		result->positions,
+		SECTION_FILE_COUNT,
+		sizeof(result->positions[0]),
 		mkv_compare_section_positions);
 
 	return VOD_OK;
@@ -580,7 +580,7 @@ mkv_metadata_reader_read(
 		if (size > state->size_limit)
 		{
 			vod_log_error(VOD_LOG_ERR, state->request_context->log, 0,
-				"mkv_metadata_reader_read: section size %uL exceeds the limit %uz", 
+				"mkv_metadata_reader_read: section size %uL exceeds the limit %uz",
 				size, state->size_limit);
 			return VOD_BAD_DATA;
 		}
@@ -664,7 +664,7 @@ mkv_metadata_parse(
 	if (timescale * info.timescale != NANOS_PER_SEC)
 	{
 		vod_log_error(VOD_LOG_ERR, request_context->log, 0,
-			"mkv_metadata_parse: unsupported - timescale %uL does not divide %uL", 
+			"mkv_metadata_parse: unsupported - timescale %uL does not divide %uL",
 			info.timescale, (uint64_t)NANOS_PER_SEC);
 		return VOD_BAD_DATA;
 	}
@@ -788,7 +788,7 @@ mkv_metadata_parse(
 
 		// is this track required ?
 		track_index = track_indexes[media_type]++;
-		if ((parse_params->required_tracks_mask[media_type] & (1 << track_index)) == 0)
+		if ((parse_params->required_tracks_mask[media_type] & ((uint64_t)1 << track_index)) == 0)
 		{
 			continue;
 		}
@@ -1004,7 +1004,7 @@ mkv_get_read_frames_request(
 	return VOD_AGAIN;
 }
 
-static void 
+static void
 mkv_sort_gop_frames(vod_array_t* gop_frames)
 {
 	frame_timecode_t* frames = gop_frames->elts;
@@ -1027,7 +1027,7 @@ mkv_sort_gop_frames(vod_array_t* gop_frames)
 	{
 		done = TRUE;
 		for (index2 = limit - index1, frame1 = frames;
-			index2 > 0; 
+			index2 > 0;
 			index2--, frame1 = frame2)
 		{
 			frame2 = frame1 + 1;
@@ -1221,7 +1221,7 @@ mkv_parse_frames_estimate_bitrate(
 		if (cur_track->media_info.bitrate == 0 &&
 			track_context->max_frame_timecode > track_context->min_frame_timecode)
 		{
-			cur_track->media_info.bitrate = track_context->total_frames_size * base->timescale * 8 / 
+			cur_track->media_info.bitrate = track_context->total_frames_size * base->timescale * 8 /
 				(track_context->max_frame_timecode - track_context->min_frame_timecode);
 		}
 
@@ -1233,8 +1233,8 @@ mkv_parse_frames_estimate_bitrate(
 
 static vod_status_t
 mkv_parse_frame(
-	ebml_context_t* context, 
-	ebml_spec_t* spec, 
+	ebml_context_t* context,
+	ebml_spec_t* spec,
 	void* dst)
 {
 	mkv_frame_parse_context_t* frame_parse_context = vod_container_of(context, mkv_frame_parse_context_t, context);
@@ -1298,7 +1298,7 @@ mkv_parse_frame(
 	}
 
 	frame_timecode = cluster->timecode + timecode;
-	
+
 	gop_frame = vod_array_push(&track_context->gop_frames);
 	if (gop_frame == NULL)
 	{
@@ -1330,7 +1330,7 @@ mkv_parse_frame(
 
 		// repush the gop frame following the reset of the array
 		gop_frame = vod_array_push(&track_context->gop_frames);		// cant fail
-		
+
 		gop_frame->timecode = frame_timecode;
 		gop_frame->unsorted_timecode = frame_timecode;
 		gop_frame->frame = NULL;
@@ -1339,7 +1339,7 @@ mkv_parse_frame(
 		switch (frame_parse_context->state)
 		{
 		case FRS_WAIT_START_KEY_FRAME:
-			if (frame_timecode < frame_parse_context->start_time || 
+			if (frame_timecode < frame_parse_context->start_time ||
 				track_context != frame_parse_context->first_track)		// wait for keyframe on the first track only (will be video in case of muxed stream)
 			{
 				return VOD_OK;

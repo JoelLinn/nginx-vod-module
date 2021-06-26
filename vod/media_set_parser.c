@@ -432,7 +432,7 @@ media_set_parse_tracks_spec(
 	void* dest)
 {
 	media_filter_parse_context_t* context = ctx;
-	uint32_t* tracks_mask = dest;
+	uint64_t* tracks_mask = dest;
 	u_char* end_pos = value->v.str.data + value->v.str.len;
 
 	vod_memzero(tracks_mask, sizeof(tracks_mask[0]) * MEDIA_TYPE_COUNT);
