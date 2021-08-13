@@ -160,7 +160,7 @@ typedef struct {
 
 typedef struct {
 	uint32_t* required_tracks_mask;
-	uint8_t* langs_mask;
+	size_t* langs_mask;
 	uint32_t clip_from;
 	uint32_t clip_to;
 	media_range_t* range;

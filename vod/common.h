@@ -16,8 +16,13 @@
 #define vod_div_ceil(x, y) (((x) + (y) - 1) / (y))
 #define vod_array_entries(x) (sizeof(x) / sizeof(x[0]))
 
-#define vod_is_bit_set(mask, index) (((mask)[(index) >> 3] >> ((index) & 7)) & 1)
-#define vod_set_bit(mask, index) (mask)[(index) >> 3] |= 1 << ((index) & 7)
+// bit sets
+#define vod_number_of_bits(i) (sizeof(i) * 8)
+#define vod_number_of_residual_bits(i) ((i) % vod_number_of_bits(size_t))
+#define vod_array_length_for_bits(i) ((i) / vod_number_of_bits(size_t) + !!((i) % vod_number_of_bits(size_t)))
+#define vod_is_bit_set(mask, index) (!!((mask)[(index) / vod_number_of_bits((mask)[0])] & ((size_t)1 << ((index) % vod_number_of_bits((mask)[0])))))
+#define vod_set_bit(mask, index) ((mask)[(index) / vod_number_of_bits((mask)[0])] |= ((size_t)1 << ((index) % vod_number_of_bits((mask)[0]))))
+#define vod_reset_bit(mask, index) ((mask)[(index) / vod_number_of_bits((mask)[0])] &= ~((size_t)1 << ((index) % vod_number_of_bits((mask)[0]))))
 
 #define vod_no_flag_set(mask, f) (((mask) & (f)) == 0)
 #define vod_all_flags_set(mask, f) (((mask) & (f)) == (f))
@@ -361,12 +366,138 @@ int vod_get_int_print_len(uint64_t n);
 // is set or any other flag that implies it like "-mavx2"
 #define vod_get_number_of_set_bits32(i) __builtin_popcount(i)
 #define vod_get_number_of_set_bits64(i) __builtin_popcountll(i)
+#define vod_get_trailing_zeroes32(i) __builtin_ctz(i)
+#define vod_get_trailing_zeroes64(i) __builtin_ctzll(i)
 #else
 #define VOD_IMPLEMENT_BIT_COUNT
 uint32_t vod_get_number_of_set_bits32(uint32_t i);
 uint32_t vod_get_number_of_set_bits64(uint64_t i);
+uint32_t vod_get_trailing_zeroes32(uint32_t i);
+uint32_t vod_get_trailing_zeroes64(uint64_t i);
 #endif
 #define vod_get_number_of_set_bits(i) ((sizeof(size_t) <= 4) ? vod_get_number_of_set_bits32(i) : vod_get_number_of_set_bits64(i))
+#define vod_get_trailing_zeroes(i) ((sizeof(size_t) <= 4) ? vod_get_trailing_zeroes32(i) : vod_get_trailing_zeroes64(i))
+
+// bit sets
+static inline uint32_t
+vod_get_number_of_set_bits_in_mask(
+	size_t* mask,
+	size_t max_bits)
+{
+	uint32_t result = 0;
+	size_t i = 0;
+	// due to inlining, loop and residual handling are unrolled and optimized
+	for (; i < max_bits / vod_number_of_bits(size_t); i++)
+	{
+		result += vod_get_number_of_set_bits(mask[i]);
+	}
+	if (vod_number_of_residual_bits(max_bits) != 0)
+	{
+		result += vod_get_number_of_set_bits(
+			mask[i] &
+			(((size_t)1 << vod_number_of_residual_bits(max_bits)) - 1));
+	}
+	return result;
+}
+
+static inline bool_t
+vod_is_all_bits_set(
+	size_t* mask,
+	size_t max_bits)
+{
+	size_t i = 0;
+
+	for (; i < max_bits / vod_number_of_bits(size_t); i++)
+	{
+		if (mask[i] != ~(size_t)0)
+		{
+			return FALSE;
+		}
+	}
+
+	return vod_number_of_residual_bits(max_bits) == 0 ?
+		TRUE :
+		!~(mask[i] | (~(size_t)0 << vod_number_of_residual_bits(max_bits)));
+}
+
+static inline bool_t
+vod_is_any_bit_set(
+	size_t* mask,
+	size_t max_bits)
+{
+	size_t i = 0;
+
+	for (; i < max_bits / vod_number_of_bits(size_t); i++)
+	{
+		if (mask[i] != (size_t)0)
+		{
+			return TRUE;
+		}
+	}
+
+	return vod_number_of_residual_bits(max_bits) == 0 ?
+		FALSE :
+		!!(mask[i] & (~(size_t)0 >> (vod_number_of_bits(size_t) - vod_number_of_residual_bits(max_bits))));
+}
+
+static inline uint32_t
+vod_get_lowest_bit_set(
+	size_t* mask,
+	size_t max_bits)
+{
+	size_t i = 0;
+
+	for (; max_bits / vod_number_of_bits(size_t); i++)
+	{
+		if (mask[i] != (size_t)0)
+		{
+			return i * vod_number_of_bits(size_t) + vod_get_trailing_zeroes(mask[i]);
+		}
+	}
+
+	// undefined if no bit is set
+	return vod_number_of_residual_bits(max_bits) == 0 ?	~(uint32_t)0 :
+		(i * vod_number_of_bits(size_t) + vod_get_trailing_zeroes(mask[i] & (((size_t)1 << vod_number_of_residual_bits(max_bits)) - 1)));
+}
+
+static inline void
+vod_set_bits(
+	size_t* mask,
+	size_t max_bits)
+{
+	vod_memset(mask, 0xff, sizeof(size_t) * (max_bits / vod_number_of_bits(size_t)));
+
+	if (vod_number_of_residual_bits(max_bits) != 0)
+	{
+		mask[max_bits / vod_number_of_bits(size_t)] |= (~(size_t)0 >> (vod_number_of_bits(size_t) - vod_number_of_residual_bits(max_bits)));
+	}
+}
+
+static inline void
+vod_reset_bits(
+	size_t* mask,
+	size_t max_bits)
+{
+	vod_memzero(mask, sizeof(size_t) * (max_bits / vod_number_of_bits(size_t)));
+
+	if (vod_number_of_residual_bits(max_bits) != 0)
+	{
+		mask[max_bits / vod_number_of_bits(size_t)] &= (~(size_t)0 << vod_number_of_residual_bits(max_bits));
+	}
+}
+
+static inline void
+vod_and_bits(
+	size_t* dst,
+	size_t* a,
+	size_t* b,
+	size_t max_bits)
+{
+	for (size_t i = 0; i < vod_array_length_for_bits(max_bits); i++)
+	{
+		dst[i] = a[i] & b[i];
+	}
+}
 
 u_char* vod_append_hex_string(u_char* p, const u_char* buffer, uint32_t buffer_size);
 
