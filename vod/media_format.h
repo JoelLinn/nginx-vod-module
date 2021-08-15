@@ -14,7 +14,16 @@
 // constants
 #define MAX_CODEC_NAME_SIZE (64)
 #define MAX_FRAME_SIZE (10 * 1024 * 1024)
-#define MAX_TRACK_COUNT (1024)
+#ifdef NGX_VOD_MAX_TRACK_COUNT
+#if NGX_VOD_MAX_TRACK_COUNT % 64 != 0
+#error MAX_TRACK_COUNT must be a multiple of 64!
+#endif
+#define MAX_TRACK_COUNT (NGX_VOD_MAX_TRACK_COUNT)
+#else
+#define MAX_TRACK_COUNT (64)
+#endif
+// The parentheses in MAX_TRACK_COUNT are included in the stringification
+#define MAX_TRACK_INDEX_LEN (sizeof(ngx_value(MAX_TRACK_COUNT)) - 2 - 1)
 #define MAX_DURATION_SEC (1000000)
 #define MAX_CLIP_DURATION (90000000)		// 25h
 #define MAX_SEQUENCE_DURATION (864000000)		// 10 days
@@ -150,6 +159,9 @@ enum {			// mp4 only
 	RTA_COUNT
 };
 
+// types
+typedef uint64_t track_mask_t[vod_array_length_for_bits(MAX_TRACK_COUNT)];
+
 // parse params
 typedef struct {
 	uint64_t start;			// relative to clip_from
@@ -159,7 +171,7 @@ typedef struct {
 } media_range_t;
 
 typedef struct {
-	uint32_t* required_tracks_mask;
+	track_mask_t* required_tracks_mask;
 	uint64_t* langs_mask;
 	uint32_t clip_from;
 	uint32_t clip_to;
@@ -373,5 +385,14 @@ vod_status_t media_format_finalize_track(
 	request_context_t* request_context,
 	int parse_type,
 	media_info_t* media_info);
+
+
+#define vod_track_mask_set_all_bits(mask) vod_set_all_bits((mask), MAX_TRACK_COUNT)
+#define vod_track_mask_reset_all_bits(mask) vod_reset_all_bits((mask), MAX_TRACK_COUNT)
+#define vod_track_mask_get_number_of_set_bits(mask) vod_get_number_of_set_bits_in_mask((mask), MAX_TRACK_COUNT)
+#define vod_track_mask_are_all_bits_set(mask) vod_are_all_bits_set((mask), MAX_TRACK_COUNT)
+#define vod_track_mask_is_any_bit_set(mask) vod_is_any_bit_set((mask), MAX_TRACK_COUNT)
+#define vod_track_mask_get_lowest_bit_set(mask) vod_get_lowest_bit_set((mask), MAX_TRACK_COUNT)
+#define vod_track_mask_and_bits(dst, a, b) vod_and_bits((dst), (a), (b), MAX_TRACK_COUNT)
 
 #endif //__MEDIA_FORMAT_H__
