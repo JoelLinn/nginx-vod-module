@@ -432,10 +432,10 @@ media_set_parse_tracks_spec(
 	void* dest)
 {
 	media_filter_parse_context_t* context = ctx;
-	uint32_t* tracks_mask = dest;
+	track_mask_t* tracks_mask = dest;
 	u_char* end_pos = value->v.str.data + value->v.str.len;
 
-	vod_memzero(tracks_mask, sizeof(tracks_mask[0]) * MEDIA_TYPE_COUNT);
+	vod_memzero(tracks_mask, sizeof(track_mask_t) * MEDIA_TYPE_COUNT);
 	if (parse_utils_extract_track_tokens(value->v.str.data, end_pos, tracks_mask) != end_pos)
 	{
 		vod_log_error(VOD_LOG_ERR, context->request_context->log, 0,
@@ -647,10 +647,10 @@ media_set_parse_source(
 	context->base.sources_head = source;
 
 	vod_log_debug4(VOD_LOG_DEBUG_LEVEL, context->base.request_context->log, 0,
-		"media_set_parse_source: parsed clip source - path=%V tracks[v]=0x%uxD tracks[a]=0x%uxD, clipFrom=%uL", 
+		"media_set_parse_source: parsed clip source - path=%V tracks[v]=0x%uxD tracks[a]=0x%luxD, clipFrom=%luL",
 		&source->mapped_uri, 
-		source->tracks_mask[MEDIA_TYPE_VIDEO],
-		source->tracks_mask[MEDIA_TYPE_AUDIO],
+		source->tracks_mask[MEDIA_TYPE_VIDEO][0],
+		source->tracks_mask[MEDIA_TYPE_AUDIO][0],
 		source->clip_from);
 
 	*result = &source->base;

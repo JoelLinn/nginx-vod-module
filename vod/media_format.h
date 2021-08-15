@@ -14,7 +14,11 @@
 // constants
 #define MAX_CODEC_NAME_SIZE (64)
 #define MAX_FRAME_SIZE (10 * 1024 * 1024)
-#define MAX_TRACK_COUNT (1024)
+#ifdef NGX_VOD_MAX_TRACK_COUNT
+#define MAX_TRACK_COUNT (NGX_VOD_MAX_TRACK_COUNT)
+#else
+#define MAX_TRACK_COUNT (64)
+#endif
 #define MAX_DURATION_SEC (1000000)
 #define MAX_CLIP_DURATION (90000000)		// 25h
 #define MAX_SEQUENCE_DURATION (864000000)		// 10 days
@@ -150,6 +154,9 @@ enum {			// mp4 only
 	RTA_COUNT
 };
 
+// types
+typedef size_t track_mask_t[vod_array_length_for_bits(MAX_TRACK_COUNT)];
+
 // parse params
 typedef struct {
 	uint64_t start;			// relative to clip_from
@@ -159,7 +166,7 @@ typedef struct {
 } media_range_t;
 
 typedef struct {
-	uint32_t* required_tracks_mask;
+	track_mask_t* required_tracks_mask;
 	size_t* langs_mask;
 	uint32_t clip_from;
 	uint32_t clip_to;
